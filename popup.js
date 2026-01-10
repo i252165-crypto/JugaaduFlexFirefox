@@ -55,20 +55,27 @@ async function handleDarkModeFormSubmit(event) {
 
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   let url;
-
   if (tab?.url) {
     try {
       url = new URL(tab.url);
       if (url.hostname !== "flexstudent.nu.edu.pk") {
         alert("Please open the FlexStudent website first.");
-        return;
+        return; 
       }
-    } catch {}
+    } catch (err) {
+      console.error("Invalid URL", err);
+      return;
+    }
   }
+
+  const result = await chrome.storage.local.get("darkMode");
+  const newState = !result.darkMode; 
+  await chrome.storage.local.set({ darkMode: newState });
 
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    function: DarkModeMainFunction
+    function: DarkModeMainFunction,
+    args: [newState] 
   });
 }
 
@@ -559,7 +566,6 @@ async function DarkModeMainFunction(enable) {
 //   }
 // }
 
-
 async function feeCalculatorMainFunction() {
   if (!window.location.href.includes("flexstudent.nu.edu.pk/Student/TentativeStudyPlan")) {
     alert("Please Open Tentative Study Plan Page first");
@@ -606,7 +612,7 @@ async function feeCalculatorMainFunction() {
     feeSpan.innerText = ` — Fee: Rs. ${semesterFee.toLocaleString()}`;
     feeSpan.style.marginLeft = "10px";
     feeSpan.style.fontWeight = "600";
-    feeSpan.style.color = "#000000";
+    feeSpan.style.color = "#0ccccc";
 
     heading.appendChild(feeSpan);
     heading.dataset.feeInjected = "true";
