@@ -50,17 +50,25 @@ async function handleCalculatorFormSubmit(event) {
 async function handleDarkModeFormSubmit(event) {
   event.preventDefault();
 
-  const result = await chrome.storage.local.get("darkMode");
-  const newState = !result.darkMode; 
-  await chrome.storage.local.set({ darkMode: newState });
-
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let url;
+
+  if (tab?.url) {
+    try {
+      url = new URL(tab.url);
+      if (url.hostname !== "flexstudent.nu.edu.pk") {
+        alert("Please open the FlexStudent website first.");
+        return;
+      }
+    } catch {}
+  }
+
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    function: DarkModeMainFunction,
-    args: [newState] 
+    function: DarkModeMainFunction
   });
 }
+
 
 
 async function handleFeedbackFormSubmit(event) {
