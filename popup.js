@@ -52,23 +52,29 @@ async function handleDarkModeFormSubmit(event) {
 
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   let url;
-
   if (tab?.url) {
     try {
       url = new URL(tab.url);
       if (url.hostname !== "flexstudent.nu.edu.pk") {
         alert("Please open the FlexStudent website first.");
-        return;
+        return; 
       }
-    } catch {}
+    } catch (err) {
+      console.error("Invalid URL", err);
+      return;
+    }
   }
+
+  const result = await chrome.storage.local.get("darkMode");
+  const newState = !result.darkMode; 
+  await chrome.storage.local.set({ darkMode: newState });
 
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    function: DarkModeMainFunction
+    function: DarkModeMainFunction,
+    args: [newState] 
   });
 }
-
 
 
 async function handleFeedbackFormSubmit(event) {
