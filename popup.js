@@ -10,6 +10,9 @@ gpaCalculatorForm.addEventListener("submit", handleCalculatorFormSubmit);
 const darkModeForm = document.getElementById("dark-mode");
 darkModeForm.addEventListener("submit", handleDarkModeFormSubmit);
 
+const feeCalculatorForm = document.getElementById("fee-calculate");
+feeCalculatorForm.addEventListener("submit", handleFeeCalculatorFormSubmit);
+
 const admitCardForm = document.getElementById("admit-card");
 admitCardForm.addEventListener("submit", handleAdmitCardSubmit);
 
@@ -62,6 +65,22 @@ async function handleDarkModeFormSubmit(event) {
   });
 }
 
+async function handleFeeCalculatorFormSubmit(event) {
+    event.preventDefault();
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let url;
+  if (tab?.url) {
+    try {
+      url = new URL(tab.url);
+      if (url.hostname !== "flexstudent.nu.edu.pk") {
+        alert("Please open the FlexStudent website first.");
+        return;
+      }
+    } catch {}
+  }
+
+  chrome.scripting.executeScript({ target: { tabId: tab.id }, function: feeCalculatorMainFunction });
+}
 
 async function handleFeedbackFormSubmit(event) {
   event.preventDefault();
@@ -515,6 +534,63 @@ async function DarkModeMainFunction(enable) {
     }
   }
 }
+
+function feeCalculatorMainFunction() {
+  if (!window.location.href.includes("flexstudent.nu.edu.pk/Student/TentativeStudyPlan")) {
+    alert("Please Open Tentative Study Plan Page first");
+    return;
+  }
+
+  const FEE_PER_CREDIT = 5000; // adjust later if needed
+
+  // Find all elements that look like "Semester No. X"
+  const semesterHeadings = Array.from(document.querySelectorAll("h4, h5, h3, div, span"))
+    .filter(el => el.innerText?.trim().startsWith("Semester No."));
+
+  if (semesterHeadings.length === 0) {
+    alert("Could not detect semester headings.");
+    return;
+  }
+
+  semesterHeadings.forEach(heading => {
+    // Avoid duplicating fee text
+    if (heading.dataset.feeInjected) return;
+
+    // Find the next table after this heading
+    let table = heading.nextElementSibling;
+    while (table && table.tagName !== "TABLE") {
+      table = table.nextElementSibling;
+    }
+    if (!table) return;
+
+    let semesterCredits = 0;
+    const rows = table.querySelectorAll("tbody tr");
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll("td");
+      if (cells.length < 4) return;
+
+      const credits = Number(cells[2].innerText.trim());
+      const type = cells[3].innerText.trim().toLowerCase();
+
+      if (type === "non credit") return;
+      if (!isNaN(credits)) semesterCredits += credits;
+    });
+
+    const semesterFee = semesterCredits * FEE_PER_CREDIT;
+
+    // Create fee badge
+    const feeSpan = document.createElement("span");
+    feeSpan.innerText = ` — Fee: Rs. ${semesterFee.toLocaleString()}`;
+    feeSpan.style.marginLeft = "10px";
+    feeSpan.style.fontWeight = "600";
+    feeSpan.style.color = "#0a7d3b";
+
+    heading.appendChild(feeSpan);
+    heading.dataset.feeInjected = "true";
+  });
+}
+
 
 async function handleAdmitCardSubmit(event) {
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
