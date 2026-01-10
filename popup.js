@@ -469,7 +469,6 @@ async function DarkModeMainFunction(enable) {
     document.head.appendChild(style);
   }
 
-  // Apply dark mode & handle top-left overlay
   if (enable === true) {
     document.body.classList.add("jugadu-dark-mode");
 

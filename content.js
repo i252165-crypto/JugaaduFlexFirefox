@@ -1,8 +1,6 @@
-// content.js
 async function DarkModeMainFunction(enable) {
   const topLeftDivId = "jugadu-top-left-overlay";
 
-  // Inject dark mode CSS only once
   if (!document.getElementById("jugadu-dark-style")) {
     const style = document.createElement("style");
     style.id = "jugadu-dark-style";
@@ -35,7 +33,6 @@ async function DarkModeMainFunction(enable) {
     document.head.appendChild(style);
   }
 
-  // Apply dark mode & handle top-left overlay
   if (enable === true) {
     document.body.classList.add("jugadu-dark-mode");
 
