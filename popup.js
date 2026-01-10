@@ -10,7 +10,7 @@ gpaCalculatorForm.addEventListener("submit", handleCalculatorFormSubmit);
 const darkModeForm = document.getElementById("dark-mode");
 darkModeForm.addEventListener("submit", handleDarkModeFormSubmit);
 
-const feeCalculatorForm = document.getElementById("fee-calculate");
+const feeCalculatorForm = document.getElementById("fee-calc");
 feeCalculatorForm.addEventListener("submit", handleFeeCalculatorFormSubmit);
 
 const admitCardForm = document.getElementById("admit-card");
@@ -53,15 +53,22 @@ async function handleCalculatorFormSubmit(event) {
 async function handleDarkModeFormSubmit(event) {
   event.preventDefault();
 
-  const result = await chrome.storage.local.get("darkMode");
-  const newState = !result.darkMode; 
-  await chrome.storage.local.set({ darkMode: newState });
-
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let url;
+
+  if (tab?.url) {
+    try {
+      url = new URL(tab.url);
+      if (url.hostname !== "flexstudent.nu.edu.pk") {
+        alert("Please open the FlexStudent website first.");
+        return;
+      }
+    } catch {}
+  }
+
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    function: DarkModeMainFunction,
-    args: [newState] 
+    function: DarkModeMainFunction
   });
 }
 
@@ -455,7 +462,6 @@ async function calculatorMainFunction() {
 async function DarkModeMainFunction(enable) {
   const topLeftDivId = "jugadu-top-left-overlay";
 
-  // Inject dark mode CSS only once
   if (!document.getElementById("jugadu-dark-style")) {
     const style = document.createElement("style");
     style.id = "jugadu-dark-style";
@@ -535,15 +541,34 @@ async function DarkModeMainFunction(enable) {
   }
 }
 
-function feeCalculatorMainFunction() {
+// async function getFeePerCreditFromPage() {
+//   try {
+//     const response = await fetch("https://www.nu.edu.pk/Admissions/FeeStructure");
+//     const htmlText = await response.text();
+//     const parser = new DOMParser();
+//     const doc = parser.parseFromString(htmlText, "text/html");
+
+//     const feeCell = doc.querySelector("#page-wrapper > div > div > div:nth-child(3) > div > div > div:nth-child(1) > div:nth-child(7) > table > tbody > tr:nth-child(1) > td.text-center");
+//     if (!feeCell) throw new Error("Fee cell not found");
+
+//     const feeText = feeCell.textContent.trim().replace(/[^\d]/g, ""); 
+//     return Number(feeText);
+//   } catch (err) {
+//     console.error("Failed to get Fee per Credit:", err);
+//     return 11000; // currently
+//   }
+// }
+
+
+async function feeCalculatorMainFunction() {
   if (!window.location.href.includes("flexstudent.nu.edu.pk/Student/TentativeStudyPlan")) {
     alert("Please Open Tentative Study Plan Page first");
     return;
   }
 
-  const FEE_PER_CREDIT = 5000; // adjust later if needed
+  // const FEE_PER_CREDIT = await getFeePerCreditFromPage(); 
+  const FEE_PER_CREDIT = 11000; // hardcoded for now, will discuss whats right later
 
-  // Find all elements that look like "Semester No. X"
   const semesterHeadings = Array.from(document.querySelectorAll("h4, h5, h3, div, span"))
     .filter(el => el.innerText?.trim().startsWith("Semester No."));
 
@@ -553,10 +578,8 @@ function feeCalculatorMainFunction() {
   }
 
   semesterHeadings.forEach(heading => {
-    // Avoid duplicating fee text
     if (heading.dataset.feeInjected) return;
 
-    // Find the next table after this heading
     let table = heading.nextElementSibling;
     while (table && table.tagName !== "TABLE") {
       table = table.nextElementSibling;
@@ -579,12 +602,11 @@ function feeCalculatorMainFunction() {
 
     const semesterFee = semesterCredits * FEE_PER_CREDIT;
 
-    // Create fee badge
     const feeSpan = document.createElement("span");
     feeSpan.innerText = ` — Fee: Rs. ${semesterFee.toLocaleString()}`;
     feeSpan.style.marginLeft = "10px";
     feeSpan.style.fontWeight = "600";
-    feeSpan.style.color = "#0a7d3b";
+    feeSpan.style.color = "#000000";
 
     heading.appendChild(feeSpan);
     heading.dataset.feeInjected = "true";
