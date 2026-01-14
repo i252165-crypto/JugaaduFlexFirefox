@@ -10,6 +10,9 @@ gpaCalculatorForm.addEventListener("submit", handleCalculatorFormSubmit);
 const darkModeForm = document.getElementById("dark-mode");
 darkModeForm.addEventListener("submit", handleDarkModeFormSubmit);
 
+const feeCalculatorForm = document.getElementById("fee-calc");
+feeCalculatorForm.addEventListener("submit", handleFeeCalculatorFormSubmit);
+
 const admitCardForm = document.getElementById("admit-card");
 admitCardForm.addEventListener("submit", handleAdmitCardSubmit);
 
@@ -76,6 +79,22 @@ async function handleDarkModeFormSubmit(event) {
   });
 }
 
+async function handleFeeCalculatorFormSubmit(event) {
+    event.preventDefault();
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let url;
+  if (tab?.url) {
+    try {
+      url = new URL(tab.url);
+      if (url.hostname !== "flexstudent.nu.edu.pk") {
+        alert("Please open the FlexStudent website first.");
+        return;
+      }
+    } catch {}
+  }
+
+  chrome.scripting.executeScript({ target: { tabId: tab.id }, function: feeCalculatorMainFunction });
+}
 
 async function handleFeedbackFormSubmit(event) {
   event.preventDefault();
@@ -450,7 +469,6 @@ async function calculatorMainFunction() {
 async function DarkModeMainFunction(enable) {
   const topLeftDivId = "jugadu-top-left-overlay";
 
-  // Inject dark mode CSS only once
   if (!document.getElementById("jugadu-dark-style")) {
     const style = document.createElement("style");
     style.id = "jugadu-dark-style";
@@ -529,6 +547,78 @@ async function DarkModeMainFunction(enable) {
     }
   }
 }
+
+// async function getFeePerCreditFromPage() {
+//   try {
+//     const response = await fetch("https://www.nu.edu.pk/Admissions/FeeStructure");
+//     const htmlText = await response.text();
+//     const parser = new DOMParser();
+//     const doc = parser.parseFromString(htmlText, "text/html");
+
+//     const feeCell = doc.querySelector("#page-wrapper > div > div > div:nth-child(3) > div > div > div:nth-child(1) > div:nth-child(7) > table > tbody > tr:nth-child(1) > td.text-center");
+//     if (!feeCell) throw new Error("Fee cell not found");
+
+//     const feeText = feeCell.textContent.trim().replace(/[^\d]/g, ""); 
+//     return Number(feeText);
+//   } catch (err) {
+//     console.error("Failed to get Fee per Credit:", err);
+//     return 11000; // currently
+//   }
+// }
+
+async function feeCalculatorMainFunction() {
+  if (!window.location.href.includes("flexstudent.nu.edu.pk/Student/TentativeStudyPlan")) {
+    alert("Please Open Tentative Study Plan Page first");
+    return;
+  }
+
+  // const FEE_PER_CREDIT = await getFeePerCreditFromPage(); 
+  const FEE_PER_CREDIT = 11000; // hardcoded for now, will discuss whats right later
+
+  const semesterHeadings = Array.from(document.querySelectorAll("h4, h5, h3, div, span"))
+    .filter(el => el.innerText?.trim().startsWith("Semester No."));
+
+  if (semesterHeadings.length === 0) {
+    alert("Could not detect semester headings.");
+    return;
+  }
+
+  semesterHeadings.forEach(heading => {
+    if (heading.dataset.feeInjected) return;
+
+    let table = heading.nextElementSibling;
+    while (table && table.tagName !== "TABLE") {
+      table = table.nextElementSibling;
+    }
+    if (!table) return;
+
+    let semesterCredits = 0;
+    const rows = table.querySelectorAll("tbody tr");
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll("td");
+      if (cells.length < 4) return;
+
+      const credits = Number(cells[2].innerText.trim());
+      const type = cells[3].innerText.trim().toLowerCase();
+
+      if (type === "non credit") return;
+      if (!isNaN(credits)) semesterCredits += credits;
+    });
+
+    const semesterFee = semesterCredits * FEE_PER_CREDIT;
+
+    const feeSpan = document.createElement("span");
+    feeSpan.innerText = ` — Fee: Rs. ${semesterFee.toLocaleString()}`;
+    feeSpan.style.marginLeft = "10px";
+    feeSpan.style.fontWeight = "600";
+    feeSpan.style.color = "#0ccccc";
+
+    heading.appendChild(feeSpan);
+    heading.dataset.feeInjected = "true";
+  });
+}
+
 
 async function handleAdmitCardSubmit(event) {
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
