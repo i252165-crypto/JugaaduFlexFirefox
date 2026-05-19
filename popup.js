@@ -1,3 +1,5 @@
+const extensionApi = globalThis.browser ?? globalThis.chrome;
+
 const marksForm = document.getElementById("grand-marks");
 marksForm.addEventListener("submit", handleMarksFormSubmit);
 
@@ -18,7 +20,7 @@ admitCardForm.addEventListener("submit", handleAdmitCardSubmit);
 
 async function handleMarksFormSubmit(event) {
   event.preventDefault();
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
   let url;
   if (tab?.url) {
     try {
@@ -27,15 +29,17 @@ async function handleMarksFormSubmit(event) {
         alert("Please open the FlexStudent website first.");
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.error("Invalid URL", err);
+    }
   }
 
-  chrome.scripting.executeScript({ target: { tabId: tab.id }, function: marksMainFunction });
+  extensionApi.scripting.executeScript({ target: { tabId: tab.id }, func: marksMainFunction });
 }
 
 async function handleCalculatorFormSubmit(event) {
   event.preventDefault();
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
   let url;
   if (tab?.url) {
     try {
@@ -44,16 +48,18 @@ async function handleCalculatorFormSubmit(event) {
         alert("Please open the FlexStudent website first.");
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.error("Invalid URL", err);
+    }
   }
 
-  chrome.scripting.executeScript({ target: { tabId: tab.id }, function: calculatorMainFunction });
+  extensionApi.scripting.executeScript({ target: { tabId: tab.id }, func: calculatorMainFunction });
 }
 
 async function handleDarkModeFormSubmit(event) {
   event.preventDefault();
 
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
   let url;
   if (tab?.url) {
     try {
@@ -68,20 +74,20 @@ async function handleDarkModeFormSubmit(event) {
     }
   }
 
-  const result = await chrome.storage.local.get("darkMode");
+  const result = await extensionApi.storage.local.get("darkMode");
   const newState = !result.darkMode; 
-  await chrome.storage.local.set({ darkMode: newState });
+  await extensionApi.storage.local.set({ darkMode: newState });
 
-  chrome.scripting.executeScript({
+  extensionApi.scripting.executeScript({
     target: { tabId: tab.id },
-    function: DarkModeMainFunction,
+    func: DarkModeMainFunction,
     args: [newState] 
   });
 }
 
 async function handleFeeCalculatorFormSubmit(event) {
     event.preventDefault();
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
   let url;
   if (tab?.url) {
     try {
@@ -90,15 +96,17 @@ async function handleFeeCalculatorFormSubmit(event) {
         alert("Please open the FlexStudent website first.");
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.error("Invalid URL", err);
+    }
   }
 
-  chrome.scripting.executeScript({ target: { tabId: tab.id }, function: feeCalculatorMainFunction });
+  extensionApi.scripting.executeScript({ target: { tabId: tab.id }, func: feeCalculatorMainFunction });
 }
 
 async function handleFeedbackFormSubmit(event) {
   event.preventDefault();
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
   let url;
   if (tab?.url) {
     try {
@@ -107,7 +115,9 @@ async function handleFeedbackFormSubmit(event) {
         alert("Please open the FlexStudent website first.");
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.error("Invalid URL", err);
+    }
   }
 
   const input = document.querySelector('input[name="feedback-radio"]:checked');
@@ -116,7 +126,7 @@ async function handleFeedbackFormSubmit(event) {
     return;
   }
 
-  chrome.scripting.executeScript({ target: { tabId: tab.id }, function: feedbackMainFunction, args: [input.value] });
+  extensionApi.scripting.executeScript({ target: { tabId: tab.id }, func: feedbackMainFunction, args: [input.value] });
 }
 
 async function marksMainFunction() {
@@ -227,7 +237,7 @@ async function marksMainFunction() {
     if (button) {
       const id = parseInt(button.getAttribute('onclick').substring(20, 24));
       const newTr = getTr(id);
-      courses[i].querySelector(`div[id=${courses[i].id}-Grand_Total_Marks]`).querySelector('tbody').innerHTML = '';
+      courses[i].querySelector(`div[id=${courses[i].id}-Grand_Total_Marks]`).querySelector('tbody').textContent = '';
       courses[i].querySelector(`div[id=${courses[i].id}-Grand_Total_Marks]`).querySelector('tbody').appendChild(newTr);
       set_marks(courseId, id);
     }
@@ -278,22 +288,33 @@ async function calculatorMainFunction() {
   }
 
   const getSelect = (currGrade) => {
-    return `<select>
-      <option value="-1">-</option>
-      <option value="4" ${currGrade == 'A+' || currGrade == 'A' ? 'selected' : ''}>A/A+</option>
-      <option value="3.67" ${currGrade == 'A-' ? 'selected' : ''}>A-</option>
-      <option value="3.33" ${currGrade == 'B+' ? 'selected' : ''}>B+</option>
-      <option value="3" ${currGrade == 'B' ? 'selected' : ''}>B</option>
-      <option value="2.67" ${currGrade == 'B-' ? 'selected' : ''}>B-</option>
-      <option value="2.33" ${currGrade == 'C+' ? 'selected' : ''}>C+</option>
-      <option value="2" ${currGrade == 'C' ? 'selected' : ''}>C</option>
-      <option value="1.67" ${currGrade == 'C-' ? 'selected' : ''}>C-</option>
-      <option value="1.33" ${currGrade == 'D+' ? 'selected' : ''}>D+</option>
-      <option value="1" ${currGrade == 'D' ? 'selected' : ''}>D</option>
-      <option value="0" ${currGrade == 'F' ? 'selected' : ''}>F</option>
-      <option value="-2" ${currGrade == 'S' ? 'selected' : ''}>S</option>
-      <option value="-3" ${currGrade == 'U' ? 'selected' : ''}>U</option>
-    </select>`;
+    const select = document.createElement('select');
+    const options = [
+      ['-1', '-'],
+      ['4', 'A/A+', currGrade == 'A+' || currGrade == 'A'],
+      ['3.67', 'A-', currGrade == 'A-'],
+      ['3.33', 'B+', currGrade == 'B+'],
+      ['3', 'B', currGrade == 'B'],
+      ['2.67', 'B-', currGrade == 'B-'],
+      ['2.33', 'C+', currGrade == 'C+'],
+      ['2', 'C', currGrade == 'C'],
+      ['1.67', 'C-', currGrade == 'C-'],
+      ['1.33', 'D+', currGrade == 'D+'],
+      ['1', 'D', currGrade == 'D'],
+      ['0', 'F', currGrade == 'F'],
+      ['-2', 'S', currGrade == 'S'],
+      ['-3', 'U', currGrade == 'U']
+    ];
+
+    options.forEach(([value, label, selected]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      if (selected) option.selected = true;
+      select.appendChild(option);
+    });
+
+    return select;
   }
 
   const getSUcredithours = () => {
@@ -323,7 +344,8 @@ async function calculatorMainFunction() {
   for (let row of rows) {
     const gradeCell = row.querySelectorAll('td.text-center')[1];
     const currentGradeText = gradeCell.innerText.trim();
-    gradeCell.innerHTML = getSelect(currentGradeText);
+    gradeCell.textContent = '';
+    gradeCell.appendChild(getSelect(currentGradeText));
   }
 
   const getCorrespondingCreditHours = (selectelem) => parseInt(selectelem.parentElement.previousElementSibling.innerText);
@@ -434,8 +456,8 @@ async function calculatorMainFunction() {
     }
 
     if (finalTotalCreditHours === 0) {
-      cgpaelem.innerHTML = `CGPA: ${cgpa.toFixed(2)}`;
-      sgpaelem.innerHTML = `SGPA: 0`;
+      cgpaelem.textContent = `CGPA: ${cgpa.toFixed(2)}`;
+      sgpaelem.textContent = `SGPA: 0`;
       return;
     }
 
@@ -450,8 +472,8 @@ async function calculatorMainFunction() {
     const calculatedSGPA = totalCreditHours > 0 ? totalGradePoints / totalCreditHours : 0;
     const calculatedCGPA = finalTotalGradePoints / finalTotalCreditHours; // CGPA is based on highest grades across all semesters
 
-    cgpaelem.innerHTML = `CGPA: ${calculatedCGPA.toFixed(2)}`;
-    sgpaelem.innerHTML = `SGPA: ${calculatedSGPA.toFixed(2)}`;
+    cgpaelem.textContent = `CGPA: ${calculatedCGPA.toFixed(2)}`;
+    sgpaelem.textContent = `SGPA: ${calculatedSGPA.toFixed(2)}`;
 
     // set cgpaelem and sgpaelem to bold
     cgpaelem.style.fontWeight = 'bold';
@@ -621,7 +643,7 @@ async function feeCalculatorMainFunction() {
 
 
 async function handleAdmitCardSubmit(event) {
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
   let url;
   if (tab?.url) {
     try {
@@ -630,7 +652,9 @@ async function handleAdmitCardSubmit(event) {
         alert("Please open the FlexStudent website first.");
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.error("Invalid URL", err);
+    }
   }
 
   const input = document.getElementById("admit-card-radio");
@@ -639,7 +663,7 @@ async function handleAdmitCardSubmit(event) {
     return;
   }
 
-  chrome.scripting.executeScript({ target: { tabId: tab.id }, function: admitCardMainFunction, args: [input.value] });
+  extensionApi.scripting.executeScript({ target: { tabId: tab.id }, func: admitCardMainFunction, args: [input.value] });
 }
 
 async function admitCardMainFunction(inputValue) {

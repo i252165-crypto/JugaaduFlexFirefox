@@ -1,19 +1,13 @@
-# Jugaadu-Flex-2.0
+# Jugaadu-Flex-3.0
 
-This is a Chrome extension that allows you to view your Grand Total Marks (client side calculation), Select feedback with a single clock in flex student portal easily and calculates SGPA (current semester) and updates CGPA. Also You can toggle dark/light mode and also you can see fees of each semester (without student fess, only courses with credit hours). Contributions and recommendations are welcome.
+This Firefox extension allows you to view your Grand Total Marks (client side calculation), select feedback with a single clock in Flex Student portal easily and calculates SGPA (current semester) and updates CGPA. Also, you can toggle dark/light mode and see fees of each semester (without student fees, only courses with credit hours). Contributions and recommendations are welcome.
 
 <p align="center">
   <img width="273" height="408" alt="image" src="https://github.com/user-attachments/assets/e4513911-7de0-4001-8572-be3b6ac24737" />
 </p>
   
 ## Installation Procedure
-Follow this installation procedure to get started with the extension. The installation is dependency free and only requires Chrome.
-
-* Clone this repository.
-* Unzip the folder.
-* Visit  ```chrome://extensions/```.
-* Enable developer mode.
-* Click on ```Load unpacked``` and select the unzipped folder.
+Go to the [Firefox Addon](https://addons.mozilla.org/en-US/firefox/addon/jugaadu-flex/) page and select `Add to Firefox`.
 
 ## Usage
 ### Marks

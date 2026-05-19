@@ -1,20 +1,40 @@
 {
   "name": "Jugaadu Flex",
-  "description": "A Chrome Extension to make FlexStudent better",
+  "description": "A browser extension to make FlexStudent better",
   "manifest_version": 3,
   "version": "2.2.1",
-  "permissions": ["scripting", "tabs", "storage"],   
-  "host_permissions": ["*://flexstudent.nu.edu.pk/*"],
+  "permissions": [
+    "scripting",
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://flexstudent.nu.edu.pk/*"
+  ],
   "action": {
     "default_popup": "popup.html"
   },
   "icons": {
     "128": "favicon.png"
   },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "jugaadu-flex@example.com",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
   "content_scripts": [
     {
-      "matches": ["*://flexstudent.nu.edu.pk/*"],
-      "js": ["content.js"],
+      "matches": [
+        "*://flexstudent.nu.edu.pk/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_start"
     }
   ]

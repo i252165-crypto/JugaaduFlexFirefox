@@ -1,3 +1,5 @@
+const extensionApi = globalThis.browser ?? globalThis.chrome;
+
 async function DarkModeMainFunction(enable) {
   const topLeftDivId = "jugadu-top-left-overlay";
 
@@ -81,6 +83,6 @@ async function DarkModeMainFunction(enable) {
 }
 
 (async () => {
-  const result = await chrome.storage.local.get("darkMode");
+  const result = await extensionApi.storage.local.get("darkMode");
   if (result.darkMode) DarkModeMainFunction(true);
 })();
