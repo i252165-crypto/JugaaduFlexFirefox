@@ -7,7 +7,7 @@ This Firefox extension allows you to view your Grand Total Marks (client side ca
 </p>
   
 ## Installation Procedure
-Go to the [Firefox Addon](https://addons.mozilla.org/en-US/firefox/addon/jugaadu-flex/) page and select `Add to Firefox`.
+Go to the [Firefox Addon](https://addons.mozilla.org/en-US/firefox/addon/jugaadu-flex/) page and select `Add to Firefox`. Same for Android.
 
 ## Usage
 ### Marks
