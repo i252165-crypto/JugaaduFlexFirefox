@@ -2,7 +2,7 @@
   "name": "Jugaadu Flex",
   "description": "A browser extension to make FlexStudent better",
   "manifest_version": 3,
-  "version": "2.2.1",
+  "version": "2.3.0",
   "permissions": [
     "scripting",
     "tabs",
