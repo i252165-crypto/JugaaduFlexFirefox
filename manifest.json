@@ -33,6 +33,7 @@
         "*://flexstudent.nu.edu.pk/*"
       ],
       "js": [
+        "third_party/darkreader.js",
         "content.js"
       ],
       "run_at": "document_start"

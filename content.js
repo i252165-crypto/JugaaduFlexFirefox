@@ -1,88 +1,26 @@
 const extensionApi = globalThis.browser ?? globalThis.chrome;
 
-async function DarkModeMainFunction(enable) {
-  const topLeftDivId = "jugadu-top-left-overlay";
+const DARK_MODE_STORAGE_KEY = "darkMode";
+const DARK_MODE_MESSAGE_TYPE = "jugadu:set-dark-mode";
 
-  if (!document.getElementById("jugadu-dark-style")) {
-    const style = document.createElement("style");
-    style.id = "jugadu-dark-style";
-    style.textContent = `
-      body.jugadu-dark-mode,
-      body.jugadu-dark-mode div,
-      body.jugadu-dark-mode section,
-      body.jugadu-dark-mode header,
-      body.jugadu-dark-mode main,
-      body.jugadu-dark-mode footer,
-      body.jugadu-dark-mode table,
-      body.jugadu-dark-mode tbody,
-      body.jugadu-dark-mode tr,
-      body.jugadu-dark-mode td,
-      body.jugadu-dark-mode th,
-      body.jugadu-dark-mode input,
-      body.jugadu-dark-mode select,
-      body.jugadu-dark-mode textarea,
-      body.jugadu-dark-mode .card,
-      body.jugadu-dark-mode .panel,
-      body.jugadu-dark-mode .panel-body {
-        background-color: #121212 !important;
-        color: #e0e0e0 !important;
-        border-color: #333 !important;
-      }
-
-      body.jugadu-dark-mode a { color: #bb86fc !important; }
-      body.jugadu-dark-mode .btn { background-color: #333 !important; color: #fff !important; }
-    `;
-    document.head.appendChild(style);
-  }
-
-  if (enable === true) {
-    document.body.classList.add("jugadu-dark-mode");
-
-    if (!document.getElementById(topLeftDivId)) {
-      const topLeftDiv = document.createElement('div');
-      topLeftDiv.id = topLeftDivId;
-      topLeftDiv.style.position = 'fixed';
-      topLeftDiv.style.top = '0';
-      topLeftDiv.style.left = '0';
-      topLeftDiv.style.width = '300px';
-      topLeftDiv.style.height = '80px';
-      topLeftDiv.style.backgroundColor = '#000';
-      topLeftDiv.style.zIndex = '9999';
-      topLeftDiv.style.pointerEvents = 'none';
-      document.body.appendChild(topLeftDiv);
-    }
-
-  } else if (enable === false) {
-    document.body.classList.remove("jugadu-dark-mode");
-
-    const overlay = document.getElementById(topLeftDivId);
-    if (overlay) overlay.remove();
-
+function applyDarkMode(enabled) {
+  if (enabled) {
+    // The public API invokes the same Dynamic Theme engine as Dark Reader.
+    // Use defaults
+    DarkReader.enable();
   } else {
-    const isDark = document.body.classList.toggle("jugadu-dark-mode");
-
-    if (isDark) {
-      if (!document.getElementById(topLeftDivId)) {
-        const topLeftDiv = document.createElement('div');
-        topLeftDiv.id = topLeftDivId;
-        topLeftDiv.style.position = 'fixed';
-        topLeftDiv.style.top = '0';
-        topLeftDiv.style.left = '0';
-        topLeftDiv.style.width = '300px';
-        topLeftDiv.style.height = '80px';
-        topLeftDiv.style.backgroundColor = '#000';
-        topLeftDiv.style.zIndex = '9999';
-        topLeftDiv.style.pointerEvents = 'none';
-        document.body.appendChild(topLeftDiv);
-      }
-    } else {
-      const overlay = document.getElementById(topLeftDivId);
-      if (overlay) overlay.remove();
-    }
+    DarkReader.disable();
   }
 }
 
+extensionApi.runtime.onMessage.addListener((message) => {
+  if (message?.type !== DARK_MODE_MESSAGE_TYPE) return undefined;
+
+  applyDarkMode(Boolean(message.enabled));
+  return Promise.resolve({ applied: true });
+});
+
 (async () => {
-  const result = await extensionApi.storage.local.get("darkMode");
-  if (result.darkMode) DarkModeMainFunction(true);
+  const { darkMode = false } = await extensionApi.storage.local.get(DARK_MODE_STORAGE_KEY);
+  applyDarkMode(darkMode);
 })();

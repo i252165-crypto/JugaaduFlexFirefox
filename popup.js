@@ -59,30 +59,31 @@ async function handleCalculatorFormSubmit(event) {
 async function handleDarkModeFormSubmit(event) {
   event.preventDefault();
 
-  let [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
-  let url;
-  if (tab?.url) {
-    try {
-      url = new URL(tab.url);
-      if (url.hostname !== "flexstudent.nu.edu.pk") {
-        alert("Please open the FlexStudent website first.");
-        return; 
-      }
-    } catch (err) {
-      console.error("Invalid URL", err);
+  const [tab] = await extensionApi.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id || !tab.url) return;
+
+  try {
+    if (new URL(tab.url).hostname !== "flexstudent.nu.edu.pk") {
+      alert("Please open the FlexStudent website first.");
       return;
     }
+  } catch (error) {
+    console.error("Invalid URL", error);
+    return;
   }
 
-  const result = await extensionApi.storage.local.get("darkMode");
-  const newState = !result.darkMode; 
+  const { darkMode = false } = await extensionApi.storage.local.get("darkMode");
+  const newState = !darkMode;
   await extensionApi.storage.local.set({ darkMode: newState });
 
-  extensionApi.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: DarkModeMainFunction,
-    args: [newState] 
-  });
+  try {
+    await extensionApi.tabs.sendMessage(tab.id, {
+      type: "jugadu:set-dark-mode",
+      enabled: newState,
+    });
+  } catch (error) {
+    console.debug("Dark mode will apply after the page reloads.", error);
+  }
 }
 
 async function handleFeeCalculatorFormSubmit(event) {
@@ -204,7 +205,6 @@ async function marksMainFunction() {
       globalWeightage += localWeightage;
       globalObtained += localObtained;
 
-      // Check if there are any best off marks
       const bestOff = checkBestOff(section, localWeightage);
       const calculationRows = reorderCalculationRows(section, bestOff);
 
@@ -229,7 +229,7 @@ async function marksMainFunction() {
     document.getElementById(`GrandtotalClassMax_${id}`).textContent = globalMaximum.toFixed(2);
   }
 
-  const courses = document.querySelectorAll(`div[class*='tab-pane']`); // Get all courses
+  const courses = document.querySelectorAll(`div[class*='tab-pane']`);
 
   for (let i = 0; i < courses.length; i++) {
     const courseId = courses[i].id;
@@ -355,7 +355,7 @@ async function calculatorMainFunction() {
     let totalCreditHours = 0;
     let totalGradePoints = 0;
 
-    // Collect all courses from all semesters
+
     const allCourses = [];
     for (let i = 0; i < semesters.length; i++) {
       let semesterRows = semesters[i].querySelectorAll("tbody > tr");
@@ -365,11 +365,9 @@ async function calculatorMainFunction() {
         const gradeCell = row.querySelector("td:nth-child(5)");
         let gradeValue = -1;
 
-        // Check if the grade cell contains a select element (for current semester)
         if (gradeCell.querySelector("select")) {
           gradeValue = parseFloat(gradeCell.querySelector("select").value);
         } else {
-          // For previous semesters, parse the existing grade text
           const gradeText = gradeCell.innerText.trim();
           switch (gradeText) {
             case "A+":
@@ -413,7 +411,7 @@ async function calculatorMainFunction() {
               gradeValue = -3;
               break;
             default:
-              gradeValue = -1; // Handle cases where grade is not a standard letter grade
+              gradeValue = -1;
           }
         }
 
@@ -423,13 +421,11 @@ async function calculatorMainFunction() {
       }
     }
 
-    // Determine the latest grade for each course (overwrite as we go)
     const courseLatestGrades = {};
     for (const course of allCourses) {
       courseLatestGrades[course.name] = course;
     }
 
-    // Calculate total credit hours and grade points based on latest grades only
     let finalTotalCreditHours = 0;
     let finalTotalGradePoints = 0;
     for (const courseName in courseLatestGrades) {
@@ -438,7 +434,6 @@ async function calculatorMainFunction() {
       finalTotalGradePoints += course.creditHours * course.gradeValue;
     }
 
-    // Update the displayed grades for the current semester
     for (let select of selects) {
       if (select.value != -1 && select.value != -2 && select.value != -3) {
         select.parentElement.nextElementSibling.innerText = select.value;
@@ -461,7 +456,7 @@ async function calculatorMainFunction() {
       return;
     }
 
-    // Calculate SGPA for current semester only
+
     for (let select of selects) {
       if (select.value != -1 && select.value != -2 && select.value != -3) {
         totalCreditHours += getCorrespondingCreditHours(select);
@@ -470,17 +465,16 @@ async function calculatorMainFunction() {
     }
 
     const calculatedSGPA = totalCreditHours > 0 ? totalGradePoints / totalCreditHours : 0;
-    const calculatedCGPA = finalTotalGradePoints / finalTotalCreditHours; // CGPA is based on highest grades across all semesters
+    const calculatedCGPA = finalTotalGradePoints / finalTotalCreditHours;
 
     cgpaelem.textContent = `CGPA: ${calculatedCGPA.toFixed(2)}`;
     sgpaelem.textContent = `SGPA: ${calculatedSGPA.toFixed(2)}`;
 
-    // set cgpaelem and sgpaelem to bold
+
     cgpaelem.style.fontWeight = 'bold';
     sgpaelem.style.fontWeight = 'bold';
   }
 
-  // add event listener to all select elements
   Array.from(document.getElementsByTagName('select')).forEach((select) => {
     select.addEventListener('change', handleSelectChange)
   });
@@ -488,114 +482,14 @@ async function calculatorMainFunction() {
   handleSelectChange();
 }
 
-async function DarkModeMainFunction(enable) {
-  const topLeftDivId = "jugadu-top-left-overlay";
-
-  if (!document.getElementById("jugadu-dark-style")) {
-    const style = document.createElement("style");
-    style.id = "jugadu-dark-style";
-    style.textContent = `
-      body.jugadu-dark-mode,
-      body.jugadu-dark-mode div,
-      body.jugadu-dark-mode section,
-      body.jugadu-dark-mode header,
-      body.jugadu-dark-mode main,
-      body.jugadu-dark-mode footer,
-      body.jugadu-dark-mode table,
-      body.jugadu-dark-mode tbody,
-      body.jugadu-dark-mode tr,
-      body.jugadu-dark-mode td,
-      body.jugadu-dark-mode th,
-      body.jugadu-dark-mode input,
-      body.jugadu-dark-mode select,
-      body.jugadu-dark-mode textarea,
-      body.jugadu-dark-mode .card,
-      body.jugadu-dark-mode .panel,
-      body.jugadu-dark-mode .panel-body {
-        background-color: #121212 !important;
-        color: #e0e0e0 !important;
-        border-color: #333 !important;
-      }
-
-      body.jugadu-dark-mode a { color: #bb86fc !important; }
-      body.jugadu-dark-mode .btn { background-color: #333 !important; color: #fff !important; }
-    `;
-    document.head.appendChild(style);
-  }
-
-  if (enable === true) {
-    document.body.classList.add("jugadu-dark-mode");
-
-    if (!document.getElementById(topLeftDivId)) {
-      const topLeftDiv = document.createElement('div');
-      topLeftDiv.id = topLeftDivId;
-      topLeftDiv.style.position = 'fixed';
-      topLeftDiv.style.top = '0';
-      topLeftDiv.style.left = '0';
-      topLeftDiv.style.width = '300px';
-      topLeftDiv.style.height = '80px';
-      topLeftDiv.style.backgroundColor = '#000';
-      topLeftDiv.style.zIndex = '9999';
-      topLeftDiv.style.pointerEvents = 'none';
-      document.body.appendChild(topLeftDiv);
-    }
-
-  } else if (enable === false) {
-    document.body.classList.remove("jugadu-dark-mode");
-
-    const overlay = document.getElementById(topLeftDivId);
-    if (overlay) overlay.remove();
-
-  } else {
-    const isDark = document.body.classList.toggle("jugadu-dark-mode");
-
-    if (isDark) {
-      if (!document.getElementById(topLeftDivId)) {
-        const topLeftDiv = document.createElement('div');
-        topLeftDiv.id = topLeftDivId;
-        topLeftDiv.style.position = 'fixed';
-        topLeftDiv.style.top = '0';
-        topLeftDiv.style.left = '0';
-        topLeftDiv.style.width = '300px';
-        topLeftDiv.style.height = '80px';
-        topLeftDiv.style.backgroundColor = '#000';
-        topLeftDiv.style.zIndex = '9999';
-        topLeftDiv.style.pointerEvents = 'none';
-        document.body.appendChild(topLeftDiv);
-      }
-    } else {
-      const overlay = document.getElementById(topLeftDivId);
-      if (overlay) overlay.remove();
-    }
-  }
-}
-
-// async function getFeePerCreditFromPage() {
-//   try {
-//     const response = await fetch("https://www.nu.edu.pk/Admissions/FeeStructure");
-//     const htmlText = await response.text();
-//     const parser = new DOMParser();
-//     const doc = parser.parseFromString(htmlText, "text/html");
-
-//     const feeCell = doc.querySelector("#page-wrapper > div > div > div:nth-child(3) > div > div > div:nth-child(1) > div:nth-child(7) > table > tbody > tr:nth-child(1) > td.text-center");
-//     if (!feeCell) throw new Error("Fee cell not found");
-
-//     const feeText = feeCell.textContent.trim().replace(/[^\d]/g, ""); 
-//     return Number(feeText);
-//   } catch (err) {
-//     console.error("Failed to get Fee per Credit:", err);
-//     return 11000; // currently
-//   }
-// }
-
 async function feeCalculatorMainFunction() {
   if (!window.location.href.includes("flexstudent.nu.edu.pk/Student/TentativeStudyPlan")) {
     alert("Please Open Tentative Study Plan Page first");
     return;
   }
 
-  // const FEE_PER_CREDIT = await getFeePerCreditFromPage(); 
-  const FEE_PER_CREDIT = 11000; // hardcoded for now, will discuss whats right later
+
+  const FEE_PER_CREDIT = 11000;
 
   const semesterHeadings = Array.from(document.querySelectorAll("h4, h5, h3, div, span"))
     .filter(el => el.innerText?.trim().startsWith("Semester No."));
